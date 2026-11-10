@@ -333,8 +333,9 @@ node images a run needs.
 
 A **scope** is a named selection over the streams, matched on capabilities.
 `full` selects every Forge stream, `golden-path` narrows to Ubuntu 24.04 on
-GB200, `l40s` to Ubuntu 24.04 on L40S at site-1, and `dsx` to the DSX datahall
-stream; [`policy.yaml`](policy.yaml) says why each is drawn where it is. The
+GB200, `l40s` to Ubuntu 24.04 on L40S at Forge site-1, `dsx` selects every DSX
+stream, and `dsx-amd64` and `dsx-arm64` one DSX site each;
+[`policy.yaml`](policy.yaml) says why each is drawn where it is. The
 set of supported Kubernetes minors is not declared anywhere,
 it is whichever minors have streams, so adding one means adding streams and
 nothing else.

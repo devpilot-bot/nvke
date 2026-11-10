@@ -11,6 +11,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -56,11 +57,12 @@ const (
 )
 
 // withheldFromEnvironment is every value in the run's environment that must
-// not reach an artifact: the jump hosts and the SSA issuer, which the
-// workflow's own step seds out of the text files it uploads, and the jump host
-// password when a run uses one. The archives the suite writes cannot be
-// sed-ed, so the suite carries the same list into its redaction. Each value
-// raw and without a trailing slash, as the workflow matches it.
+// not reach an artifact: the jump hosts, the DSX API hosts and the SSA issuer,
+// which the workflow's own step seds out of the text files it uploads, and the
+// jump host password when a run uses one. The archives the suite writes cannot
+// be sed-ed, so the suite carries the same list into its redaction. Each value
+// raw and without a trailing slash, as the workflow matches it, and an API
+// host on its own as well, since a failed lookup names nothing else.
 func withheldFromEnvironment() []string {
 	var values []string
 	for _, kv := range os.Environ() {
@@ -68,12 +70,17 @@ func withheldFromEnvironment() []string {
 		if !ok || value == "" {
 			continue
 		}
-		if !strings.HasSuffix(name, "_JUMP_HOST") && name != "SSA_ISSUER" && name != envJumpHostPassword {
+		api := strings.HasPrefix(name, "DSX_") && strings.HasSuffix(name, "_API")
+		if !strings.HasSuffix(name, "_JUMP_HOST") && !api && name != "SSA_ISSUER" && name != envJumpHostPassword {
 			continue
 		}
 		values = append(values, value)
-		if trimmed := strings.TrimRight(value, "/"); trimmed != value {
+		trimmed := strings.TrimRight(value, "/")
+		if trimmed != value {
 			values = append(values, trimmed)
+		}
+		if u, err := url.Parse(trimmed); api && err == nil && u.Host != "" {
+			values = append(values, u.Host)
 		}
 	}
 	return values
@@ -726,7 +733,7 @@ func keepFailedNode(cfg config.Config) bool {
 // provider from it.
 //
 // It takes no credential as an argument, but one is required: the provider
-// mints its own token from DSX_<DATAHALL>_SSA_CLIENT_ID and _SECRET, named for
+// mints its own token from DSX_<SITE>_SSA_CLIENT_ID and _SECRET, named for
 // the key the resolved site is filed under, and fails naming both when either
 // is empty. A datahall also keeps a bootstrap client of its own in its cluster,
 // which both recorded manual runs borrowed, but the provider does not read it:

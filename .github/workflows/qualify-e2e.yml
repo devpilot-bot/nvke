@@ -247,9 +247,10 @@ jobs:
     environment: ci-shared
     # The same gate as the lanes: a dispatch is deliberate, a beta tag was
     # pushed to this repository, and a pull_request run has to be asked for with
-    # the `qualify-e2e` label, the `qualify-e2e-l40s` label for the site-1 L40S
-    # scope, or the `qualify-e2e-dry-run` label for a dry run, from a branch in
-    # this repository. The lanes need this job, so they are skipped with it.
+    # the `qualify-e2e` label, the `qualify-e2e-l40s` label for the Forge
+    # site-1 L40S scope, or the `qualify-e2e-dry-run` label for a dry run, from
+    # a branch in this repository. The lanes need this job, so they are skipped
+    # with it.
     if: >-
       github.repository_id == '1323115536' &&
       (github.event_name == 'workflow_dispatch' ||
@@ -297,16 +298,18 @@ jobs:
       # A label run carries no inputs, so a scope other than the repository
       # default was unreachable from a branch: dispatch is refused for one by
       # the Teleport ref guard, and a label takes what the variables say.
-      # qualify-e2e-dsx is that missing input for the DSX stream, and exists
-      # because a workflow_dispatch from a branch cannot reach Teleport at all:
-      # the join token allows only refs/heads/main and refs/pull/*/merge. Until
-      # this lands on main a label is the only way to run the DSX stream.
-      # qualify-e2e-l40s is the same for the site-1 L40S stream.
+      # qualify-e2e-dsx is that missing input for the amd64 DSX stream, and
+      # exists because a workflow_dispatch from a branch cannot reach Teleport
+      # at all: the join token allows only refs/heads/main and
+      # refs/pull/*/merge. Until this lands on main a label is the only way to
+      # run the DSX stream. It names dsx-amd64 rather than dsx so it leaves the
+      # arm64 site's trays alone; that stream is QUALIFY_E2E_SCOPE=dsx-arm64.
+      # qualify-e2e-l40s is the same for the Forge site-1 L40S stream.
       #
       # A tag push does not read QUALIFY_E2E_SCOPE, so a beta qualifies
       # golden-path whatever a label run left there. qualify-run's env says
       # why none of the label runs' variables reach a tag push.
-      SCOPE: ${{ inputs.scope || (github.event.label.name == 'qualify-e2e-dsx' && 'dsx') || (github.event.label.name == 'qualify-e2e-l40s' && 'l40s') || (github.event_name != 'push' && vars.QUALIFY_E2E_SCOPE) || 'golden-path' }}
+      SCOPE: ${{ inputs.scope || (github.event.label.name == 'qualify-e2e-dsx' && 'dsx-amd64') || (github.event.label.name == 'qualify-e2e-l40s' && 'l40s') || (github.event_name != 'push' && vars.QUALIFY_E2E_SCOPE) || 'golden-path' }}
       # The registry.yaml base names this, so the plan fails here when it is
       # unset rather than naming an artifact under no org. The same variable
       # the lanes build SITE_IMAGES from.
@@ -475,8 +478,8 @@ jobs:
     # "Log in to NVCR" below), so it needs the same approval a real run does.
     # Only Teleport and the suite itself skip on a dry run, not the gate.
     #
-    # The DSX arm is first because a job gets one environment and the
-    # datahall's identifiers live on `dsx`, not repository-wide: a run that
+    # The DSX arm is first because a job gets one environment and the DSX
+    # sites' identifiers live on `dsx`, not repository-wide: a run that
     # took `forge` would read them as empty, and an unset identifier skips the
     # site rather than failing, so the lane would report "no declared site
     # offers" -- a missing variable wearing the costume of missing hardware.
@@ -540,9 +543,9 @@ jobs:
       # run and a tag push carry no dispatch input, and a beta that stopped at
       # a booted node would have qualified none of what it was cut for.
       #
-      # The DSX label carried its own provision default while the datahall
-      # bound one machine and the suite had no DSX tenant spec. Neither holds:
-      # the datahall binds eight, and the tenant spec landed with #1879, so DSX
+      # The DSX label carried its own provision default while a site bound one
+      # machine and the suite had no DSX tenant spec. Neither holds: a site
+      # binds several, and the tenant spec landed with #1879, so DSX
       # defaults to full with everything else. The variable still sits ahead of
       # the default, so a lane pins a shorter stage in its own environment
       # rather than through a repository-wide override, which is what collides
@@ -673,31 +676,32 @@ jobs:
       # beside the rest, and everything else is a variable naming
       # infrastructure rather than granting anything.
       DSX_ORG_ID: ${{ vars.DSX_ORG_ID }}
-      # The datahall's API host. Not part of the key, so environments/dsx.yaml
-      # names no datahall --- and a secret rather than a variable, because
-      # GitHub prints job-level env in every step's log header and only a
-      # secret is masked there. As a variable the hostname, which carries the
-      # datahall's name, was published in the log of every DSX run.
-      DSX_DATAHALL_1_API: ${{ secrets.DSX_DATAHALL_1_API }}
-      DSX_DATAHALL_1_SITE_ID: ${{ vars.DSX_DATAHALL_1_SITE_ID }}
-      DSX_DATAHALL_1_TENANT_ID: ${{ vars.DSX_DATAHALL_1_TENANT_ID }}
-      DSX_DATAHALL_1_VPC_ID: ${{ vars.DSX_DATAHALL_1_VPC_ID }}
-      DSX_DATAHALL_1_VPC_PREFIX_ID: ${{ vars.DSX_DATAHALL_1_VPC_PREFIX_ID }}
-      DSX_DATAHALL_1_SSH_KEY_GROUP_ID: ${{ vars.DSX_DATAHALL_1_SSH_KEY_GROUP_ID }}
-      DSX_DATAHALL_1_INSTANCE_TYPE_ID: ${{ vars.DSX_DATAHALL_1_INSTANCE_TYPE_ID }}
-      DSX_DATAHALL_1_NODE_USER: ${{ vars.DSX_DATAHALL_1_NODE_USER }}
-      DSX_DATAHALL_1_TELEPORT_LOGIN: ${{ vars.DSX_DATAHALL_1_TELEPORT_LOGIN }}
-      DSX_DATAHALL_1_JUMP_HOST: ${{ secrets.DSX_DATAHALL_1_JUMP_HOST }}
-      DSX_DATAHALL_2_API: ${{ secrets.DSX_DATAHALL_2_API }}
-      DSX_DATAHALL_2_SITE_ID: ${{ vars.DSX_DATAHALL_2_SITE_ID }}
-      DSX_DATAHALL_2_TENANT_ID: ${{ vars.DSX_DATAHALL_2_TENANT_ID }}
-      DSX_DATAHALL_2_VPC_ID: ${{ vars.DSX_DATAHALL_2_VPC_ID }}
-      DSX_DATAHALL_2_VPC_PREFIX_ID: ${{ vars.DSX_DATAHALL_2_VPC_PREFIX_ID }}
-      DSX_DATAHALL_2_SSH_KEY_GROUP_ID: ${{ vars.DSX_DATAHALL_2_SSH_KEY_GROUP_ID }}
-      DSX_DATAHALL_2_INSTANCE_TYPE_ID: ${{ vars.DSX_DATAHALL_2_INSTANCE_TYPE_ID }}
-      DSX_DATAHALL_2_NODE_USER: ${{ vars.DSX_DATAHALL_2_NODE_USER }}
-      DSX_DATAHALL_2_TELEPORT_LOGIN: ${{ vars.DSX_DATAHALL_2_TELEPORT_LOGIN }}
-      DSX_DATAHALL_2_JUMP_HOST: ${{ secrets.DSX_DATAHALL_2_JUMP_HOST }}
+      # Each site's API host. Not part of the key, so environments/dsx.yaml
+      # says nothing about which site this is --- and a secret rather than a
+      # variable, because GitHub prints job-level env in every step's log
+      # header and only a secret is masked there. As a variable the hostname,
+      # which carries the site's name, was published in the log of every DSX
+      # run.
+      DSX_SITE_1_API: ${{ secrets.DSX_SITE_1_API }}
+      DSX_SITE_1_SITE_ID: ${{ vars.DSX_SITE_1_SITE_ID }}
+      DSX_SITE_1_TENANT_ID: ${{ vars.DSX_SITE_1_TENANT_ID }}
+      DSX_SITE_1_VPC_ID: ${{ vars.DSX_SITE_1_VPC_ID }}
+      DSX_SITE_1_VPC_PREFIX_ID: ${{ vars.DSX_SITE_1_VPC_PREFIX_ID }}
+      DSX_SITE_1_SSH_KEY_GROUP_ID: ${{ vars.DSX_SITE_1_SSH_KEY_GROUP_ID }}
+      DSX_SITE_1_INSTANCE_TYPE_ID: ${{ vars.DSX_SITE_1_INSTANCE_TYPE_ID }}
+      DSX_SITE_1_NODE_USER: ${{ vars.DSX_SITE_1_NODE_USER }}
+      DSX_SITE_1_TELEPORT_LOGIN: ${{ vars.DSX_SITE_1_TELEPORT_LOGIN }}
+      DSX_SITE_1_JUMP_HOST: ${{ secrets.DSX_SITE_1_JUMP_HOST }}
+      DSX_SITE_2_API: ${{ secrets.DSX_SITE_2_API }}
+      DSX_SITE_2_SITE_ID: ${{ vars.DSX_SITE_2_SITE_ID }}
+      DSX_SITE_2_TENANT_ID: ${{ vars.DSX_SITE_2_TENANT_ID }}
+      DSX_SITE_2_VPC_ID: ${{ vars.DSX_SITE_2_VPC_ID }}
+      DSX_SITE_2_VPC_PREFIX_ID: ${{ vars.DSX_SITE_2_VPC_PREFIX_ID }}
+      DSX_SITE_2_SSH_KEY_GROUP_ID: ${{ vars.DSX_SITE_2_SSH_KEY_GROUP_ID }}
+      DSX_SITE_2_INSTANCE_TYPE_ID: ${{ vars.DSX_SITE_2_INSTANCE_TYPE_ID }}
+      DSX_SITE_2_NODE_USER: ${{ vars.DSX_SITE_2_NODE_USER }}
+      DSX_SITE_2_TELEPORT_LOGIN: ${{ vars.DSX_SITE_2_TELEPORT_LOGIN }}
+      DSX_SITE_2_JUMP_HOST: ${{ secrets.DSX_SITE_2_JUMP_HOST }}
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -1081,26 +1085,26 @@ jobs:
             "cpu arch|ARCH|||"
             "gpu model|GPU|||"
             "DSX org|DSX_ORG_ID||DSX_ORG_ID|DSX_ORG_ID"
-            "DSX jump host|DSX_DATAHALL_1_JUMP_HOST|||"
-            "DSX api|DSX_DATAHALL_1_API|||"
-            "DSX site|DSX_DATAHALL_1_SITE_ID||DSX_DATAHALL_1_SITE_ID|DSX_DATAHALL_1_SITE_ID"
-            "DSX tenant|DSX_DATAHALL_1_TENANT_ID||DSX_DATAHALL_1_TENANT_ID|DSX_DATAHALL_1_TENANT_ID"
-            "DSX VPC|DSX_DATAHALL_1_VPC_ID||DSX_DATAHALL_1_VPC_ID|DSX_DATAHALL_1_VPC_ID"
-            "DSX VPC prefix|DSX_DATAHALL_1_VPC_PREFIX_ID||DSX_DATAHALL_1_VPC_PREFIX_ID|DSX_DATAHALL_1_VPC_PREFIX_ID"
-            "DSX SSH key group|DSX_DATAHALL_1_SSH_KEY_GROUP_ID||DSX_DATAHALL_1_SSH_KEY_GROUP_ID|DSX_DATAHALL_1_SSH_KEY_GROUP_ID"
-            "DSX instance type|DSX_DATAHALL_1_INSTANCE_TYPE_ID||DSX_DATAHALL_1_INSTANCE_TYPE_ID|DSX_DATAHALL_1_INSTANCE_TYPE_ID"
-            "DSX Teleport login|DSX_DATAHALL_1_TELEPORT_LOGIN||DSX_DATAHALL_1_TELEPORT_LOGIN|DSX_DATAHALL_1_TELEPORT_LOGIN"
-            "DSX node user|DSX_DATAHALL_1_NODE_USER||DSX_DATAHALL_1_NODE_USER|DSX_DATAHALL_1_NODE_USER"
-            "datahall-2 jump host|DSX_DATAHALL_2_JUMP_HOST|||"
-            "datahall-2 api|DSX_DATAHALL_2_API|||"
-            "datahall-2 site|DSX_DATAHALL_2_SITE_ID||DSX_DATAHALL_2_SITE_ID|DSX_DATAHALL_2_SITE_ID"
-            "datahall-2 tenant|DSX_DATAHALL_2_TENANT_ID||DSX_DATAHALL_2_TENANT_ID|DSX_DATAHALL_2_TENANT_ID"
-            "datahall-2 VPC|DSX_DATAHALL_2_VPC_ID||DSX_DATAHALL_2_VPC_ID|DSX_DATAHALL_2_VPC_ID"
-            "datahall-2 VPC prefix|DSX_DATAHALL_2_VPC_PREFIX_ID||DSX_DATAHALL_2_VPC_PREFIX_ID|DSX_DATAHALL_2_VPC_PREFIX_ID"
-            "datahall-2 SSH key group|DSX_DATAHALL_2_SSH_KEY_GROUP_ID||DSX_DATAHALL_2_SSH_KEY_GROUP_ID|DSX_DATAHALL_2_SSH_KEY_GROUP_ID"
-            "datahall-2 instance type|DSX_DATAHALL_2_INSTANCE_TYPE_ID||DSX_DATAHALL_2_INSTANCE_TYPE_ID|DSX_DATAHALL_2_INSTANCE_TYPE_ID"
-            "datahall-2 Teleport login|DSX_DATAHALL_2_TELEPORT_LOGIN||DSX_DATAHALL_2_TELEPORT_LOGIN|DSX_DATAHALL_2_TELEPORT_LOGIN"
-            "datahall-2 node user|DSX_DATAHALL_2_NODE_USER||DSX_DATAHALL_2_NODE_USER|DSX_DATAHALL_2_NODE_USER"
+            "DSX site-1 jump host|DSX_SITE_1_JUMP_HOST|||"
+            "DSX site-1 api|DSX_SITE_1_API|||"
+            "DSX site-1 site|DSX_SITE_1_SITE_ID||DSX_SITE_1_SITE_ID|DSX_SITE_1_SITE_ID"
+            "DSX site-1 tenant|DSX_SITE_1_TENANT_ID||DSX_SITE_1_TENANT_ID|DSX_SITE_1_TENANT_ID"
+            "DSX site-1 VPC|DSX_SITE_1_VPC_ID||DSX_SITE_1_VPC_ID|DSX_SITE_1_VPC_ID"
+            "DSX site-1 VPC prefix|DSX_SITE_1_VPC_PREFIX_ID||DSX_SITE_1_VPC_PREFIX_ID|DSX_SITE_1_VPC_PREFIX_ID"
+            "DSX site-1 SSH key group|DSX_SITE_1_SSH_KEY_GROUP_ID||DSX_SITE_1_SSH_KEY_GROUP_ID|DSX_SITE_1_SSH_KEY_GROUP_ID"
+            "DSX site-1 instance type|DSX_SITE_1_INSTANCE_TYPE_ID||DSX_SITE_1_INSTANCE_TYPE_ID|DSX_SITE_1_INSTANCE_TYPE_ID"
+            "DSX site-1 Teleport login|DSX_SITE_1_TELEPORT_LOGIN||DSX_SITE_1_TELEPORT_LOGIN|DSX_SITE_1_TELEPORT_LOGIN"
+            "DSX site-1 node user|DSX_SITE_1_NODE_USER||DSX_SITE_1_NODE_USER|DSX_SITE_1_NODE_USER"
+            "DSX site-2 jump host|DSX_SITE_2_JUMP_HOST|||"
+            "DSX site-2 api|DSX_SITE_2_API|||"
+            "DSX site-2 site|DSX_SITE_2_SITE_ID||DSX_SITE_2_SITE_ID|DSX_SITE_2_SITE_ID"
+            "DSX site-2 tenant|DSX_SITE_2_TENANT_ID||DSX_SITE_2_TENANT_ID|DSX_SITE_2_TENANT_ID"
+            "DSX site-2 VPC|DSX_SITE_2_VPC_ID||DSX_SITE_2_VPC_ID|DSX_SITE_2_VPC_ID"
+            "DSX site-2 VPC prefix|DSX_SITE_2_VPC_PREFIX_ID||DSX_SITE_2_VPC_PREFIX_ID|DSX_SITE_2_VPC_PREFIX_ID"
+            "DSX site-2 SSH key group|DSX_SITE_2_SSH_KEY_GROUP_ID||DSX_SITE_2_SSH_KEY_GROUP_ID|DSX_SITE_2_SSH_KEY_GROUP_ID"
+            "DSX site-2 instance type|DSX_SITE_2_INSTANCE_TYPE_ID||DSX_SITE_2_INSTANCE_TYPE_ID|DSX_SITE_2_INSTANCE_TYPE_ID"
+            "DSX site-2 Teleport login|DSX_SITE_2_TELEPORT_LOGIN||DSX_SITE_2_TELEPORT_LOGIN|DSX_SITE_2_TELEPORT_LOGIN"
+            "DSX site-2 node user|DSX_SITE_2_NODE_USER||DSX_SITE_2_NODE_USER|DSX_SITE_2_NODE_USER"
             "site-2 site|FORGE_SITE_2_SITE_ID||FORGE_SITE_2_SITE_ID|FORGE_SITE_2_SITE_ID"
             "site-2 VPC|FORGE_SITE_2_VPC_ID||FORGE_SITE_2_VPC_ID|FORGE_SITE_2_VPC_ID"
             "site-2 VPC prefix|FORGE_SITE_2_VPC_PREFIX_ID||FORGE_SITE_2_VPC_PREFIX_ID|FORGE_SITE_2_VPC_PREFIX_ID"
@@ -1158,14 +1162,14 @@ jobs:
               [ -n "${value}" ] || value="<unset>"
               # The rows whose values are withheld. This file is an artifact
               # and outlives the run; what an operator needs from it is that
-              # the jump host and join token resolved and where they came
-              # from, both of which survive. Whether each was set is the part
-              # that is diagnostic.
+              # the jump hosts, API hosts and join token resolved and where
+              # they came from, both of which survive. Whether each was set is
+              # the part that is diagnostic.
               # Matched by shape, not by name: a site added later is withheld
               # by having named its secret the way the convention requires,
               # and a list is one entry out of date the day someone forgets.
               case "${resolved}" in
-                *_JUMP_HOST|*_TELEPORT_JOIN_TOKEN) withhold=1 ;;
+                *_JUMP_HOST|*_TELEPORT_JOIN_TOKEN|DSX_*_API) withhold=1 ;;
                 *) withhold=0 ;;
               esac
               if [ "${withhold}" = 1 ] && [ "${value}" != "<unset>" ]; then
@@ -1251,20 +1255,20 @@ jobs:
           # artifact upload. The identifiers stay at job level because the
           # provenance step reads them back by name.
           SSA_ISSUER: ${{ secrets.SSA_ISSUER }}
-          DSX_DATAHALL_1_SSA_CLIENT_ID: ${{ secrets.DSX_DATAHALL_1_SSA_CLIENT_ID }}
-          DSX_DATAHALL_1_SSA_CLIENT_SECRET: ${{ secrets.DSX_DATAHALL_1_SSA_CLIENT_SECRET }}
-          DSX_DATAHALL_2_SSA_CLIENT_ID: ${{ secrets.DSX_DATAHALL_2_SSA_CLIENT_ID }}
-          DSX_DATAHALL_2_SSA_CLIENT_SECRET: ${{ secrets.DSX_DATAHALL_2_SSA_CLIENT_SECRET }}
+          DSX_SITE_1_SSA_CLIENT_ID: ${{ secrets.DSX_SITE_1_SSA_CLIENT_ID }}
+          DSX_SITE_1_SSA_CLIENT_SECRET: ${{ secrets.DSX_SITE_1_SSA_CLIENT_SECRET }}
+          DSX_SITE_2_SSA_CLIENT_ID: ${{ secrets.DSX_SITE_2_SSA_CLIENT_ID }}
+          DSX_SITE_2_SSA_CLIENT_SECRET: ${{ secrets.DSX_SITE_2_SSA_CLIENT_SECRET }}
           # JUMP_HOST_PASSWORD is deliberately absent: its presence is what
           # switches the suite off the Teleport relay and onto plain SSH.
         run: release/hack/qualify-e2e.sh run
 
-      # The suite names the jump host in its own errors, and the SSA token
-      # exchange names its issuer in the errors it returns. Both land in the
-      # log and the JUnit report, and GitHub masks a secret in the job log but
-      # not in an uploaded artifact. SSA_ISSUER is passed to this step rather
-      # than left at job level for the same reason the suite step holds the
-      # client secret.
+      # The suite names the jump host in its own errors, the SSA token
+      # exchange names its issuer in the errors it returns, and a failed API
+      # call names its host. All land in the log and the JUnit report, and
+      # GitHub masks a secret in the job log but not in an uploaded artifact.
+      # SSA_ISSUER is passed to this step rather than left at job level for the
+      # same reason the suite step holds the client secret.
       - name: Withhold credentials from the run log
         if: always()
         shell: bash

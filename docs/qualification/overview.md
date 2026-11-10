@@ -69,16 +69,18 @@ A beta tag is cut once a night, so it adds one run rather than a stream of them.
 | label | what it runs |
 |---|---|
 | `qualify-e2e` | `QUALIFY_E2E_SCOPE`, or `golden-path` when that is unset: Ubuntu 24.04 on GB200, both arches |
-| `qualify-e2e-l40s` | the `l40s` scope: Ubuntu 24.04 on L40S at site-1, amd64 |
-| `qualify-e2e-dsx` | the `dsx` scope: the DSX datahall, at stage `full` |
+| `qualify-e2e-l40s` | the `l40s` scope: Ubuntu 24.04 on L40S at Forge site-1, amd64 |
+| `qualify-e2e-dsx` | the `dsx-amd64` scope: the DSX L40S stream at DSX site-1, at stage `full` |
 | `qualify-e2e-dry-run` | everything except joining Teleport and running the suite |
 
 The DSX label names its scope outright, where `qualify-e2e` takes whatever
-`QUALIFY_E2E_SCOPE` says. It no longer pins a stage: the datahall binds eight
-machines and the suite has a DSX tenant spec, so a `full` run places its three
---- a site controller, a tenant control plane and a worker --- the same as any
-other lane. A lane that wants a shorter stage sets `QUALIFY_E2E_STAGE` in its
-own environment.
+`QUALIFY_E2E_SCOPE` says. It names one site, `dsx-amd64`, so it leaves the arm64
+site's trays alone: `dsx-arm64` runs the VR200 stream at DSX site-2 and `dsx`
+runs both, each by setting `QUALIFY_E2E_SCOPE` and applying `qualify-e2e`. It no
+longer pins a stage: a site binds several machines and the suite has a DSX
+tenant spec, so a `full` run places its three --- a site controller, a tenant
+control plane and a worker --- the same as any other lane. A lane that wants a
+shorter stage sets `QUALIFY_E2E_STAGE` in its own environment.
 
 A run starts with a `plan` job that runs `qualify plan` and uploads
 `plan.json`, and then a single `qualify-run` job runs once for each stream of

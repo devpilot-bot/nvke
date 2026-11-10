@@ -42,18 +42,20 @@ func TestFullStageSupported(t *testing.T) {
 	}
 }
 
-// The workflow seds the jump hosts and the SSA issuer out of the text files it
-// uploads; the suite has to carry the same values into the archives it
-// writes, raw and without the trailing slash the workflow also strips.
+// The workflow seds the jump hosts, the DSX API hosts and the SSA issuer out of
+// the text files it uploads; the suite has to carry the same values into the
+// archives it writes, raw and without the trailing slash the workflow also
+// strips. An API host is carried on its own too: a failed lookup names only it.
 func TestWithheldFromEnvironment(t *testing.T) {
 	t.Setenv("FORGE_JUMP_HOST", "jump.example.test/")
-	t.Setenv("DSX_DATAHALL_1_JUMP_HOST", "10.1.2.3")
+	t.Setenv("DSX_SITE_1_JUMP_HOST", "10.1.2.3")
+	t.Setenv("DSX_SITE_1_API", "https://api.example.test/v2/org/x/nico")
 	t.Setenv("SSA_ISSUER", "https://issuer.example.test/")
 	t.Setenv("JUMP_HOST_PASSWORD", "hunter2hunter2")
 	t.Setenv("FORGE_API_KEY", "not-withheld-by-this-list")
 
 	got := strings.Join(withheldFromEnvironment(), "\n")
-	for _, want := range []string{"jump.example.test/", "jump.example.test", "10.1.2.3", "https://issuer.example.test/", "https://issuer.example.test", "hunter2hunter2"} {
+	for _, want := range []string{"jump.example.test/", "jump.example.test", "10.1.2.3", "https://api.example.test/v2/org/x/nico", "api.example.test", "https://issuer.example.test/", "https://issuer.example.test", "hunter2hunter2"} {
 		if !strings.Contains(got, want) {
 			t.Errorf("withheldFromEnvironment lacks %q:\n%s", want, got)
 		}

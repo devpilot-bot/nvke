@@ -503,7 +503,7 @@ func jumpHost() (hostVar, host, login string) {
 	for _, s := range [][2]string{
 		{"FORGE_JUMP_HOST", "FORGE_TELEPORT_LOGIN"},
 		{"FORGE_SITE_2_JUMP_HOST", "FORGE_SITE_2_TELEPORT_LOGIN"},
-		{"DSX_DATAHALL_1_JUMP_HOST", "DSX_DATAHALL_1_TELEPORT_LOGIN"},
+		{"DSX_SITE_1_JUMP_HOST", "DSX_SITE_1_TELEPORT_LOGIN"},
 	} {
 		if h := os.Getenv(s[0]); h != "" {
 			return s[0], h, os.Getenv(s[1])

@@ -16,9 +16,9 @@ happens after a machine is chosen.
 Files live in `controller/test/e2e/environments/`, one per environment, named
 by the value of `-e2e.environment`. There are three: `forge.yaml`,
 `forge-perf.yaml` for the Forge site for performance runs, and `dsx.yaml` for
-the DSX datahalls. One file per *provider and org*: a datahall or site is an
-entry inside one, not a file of its own, and the perf environment has its own
-because its site sits in another org.
+the DSX sites. One file per *provider and org*: a site is an entry inside one,
+not a file of its own, and the perf environment has its own because its site
+sits in another org.
 
 ## The shape
 
@@ -224,35 +224,35 @@ infrastructure:
   org:
     id: "${DSX_ORG_ID:-ncx}"          # a name, where Forge's is numeric
   sites:
-    datahall-1:                       # generic; `api` carries the host
-      api:         "${DSX_DATAHALL_1_API:-}"
-      id:          "${DSX_DATAHALL_1_SITE_ID:-}"
-      tenantID:    "${DSX_DATAHALL_1_TENANT_ID:-}"   # no Forge equivalent
-      vpcPrefixID: "${DSX_DATAHALL_1_VPC_PREFIX_ID:-}"
+    site-1:                           # generic; `api` carries the host
+      api:         "${DSX_SITE_1_API:-}"
+      id:          "${DSX_SITE_1_SITE_ID:-}"
+      tenantID:    "${DSX_SITE_1_TENANT_ID:-}"   # no Forge equivalent
+      vpcPrefixID: "${DSX_SITE_1_VPC_PREFIX_ID:-}"
       instanceTypes:
-        - name: datahall-1-nvke-tenant
-          id: "${DSX_DATAHALL_1_INSTANCE_TYPE_ID:-}"
-          provides: {machineType: gpu, arch: amd64}
+        - name: site-1-nvke-tenant
+          id: "${DSX_SITE_1_INSTANCE_TYPE_ID:-}"
+          provides: {machineType: gpu, arch: amd64, gpu: l40s}
 ```
 
 Three differences are load-bearing rather than cosmetic.
 
-**Each datahall declares its own API host.** `api` is required and there is no
-site-lookup call the way Forge needs one — the host addresses the datahall
+**Each site declares its own API host.** `api` is required and there is no
+site-lookup call the way Forge needs one — the host addresses the site
 directly. The key itself is generic, as `forge.yaml`'s `site-1` and `site-2`
-are, so which datahall this is stays in a variable. Two datahalls at one site
-hold completely disjoint UUIDs for the same kinds of object, and nothing in a
-response says which one an id came from — so a second datahall is a second key,
-never a reused one.
+are, so which site this is stays in a variable. Two sites hold completely
+disjoint UUIDs for the same kinds of object, even when they sit together, and
+nothing in a response says which one an id came from — so a second site is a
+second key, never a reused one.
 
-**Credentials are per datahall.** The names are derived from the key:
-`DSX_<DATAHALL>_SSA_CLIENT_ID` and `_SECRET`, exchanged for a bearer token at
-the issuer in `SSA_ISSUER`. A client scoped to one datahall cannot be picked up
-by a run against another, and a second datahall needs no code.
+**Credentials are per site.** The names are derived from the key:
+`DSX_<SITE>_SSA_CLIENT_ID` and `_SECRET`, exchanged for a bearer token at
+the issuer in `SSA_ISSUER`. A client scoped to one site cannot be picked up
+by a run against another, and a second site needs no code.
 
-**`full` runs, and picks its own tenant.** Every stage runs on DSX: the
-datahall has its own tenant spec, so a `full` run builds the site and then a
-control plane and worker on it. The site lane registers one tenant entry per
+**`full` runs, and picks its own tenant.** Every stage runs on DSX: DSX has its
+own tenant spec, so a `full` run builds the site and then a control plane and
+worker on it. The site lane registers one tenant entry per
 dialect and each decodes the environment strictly, so the lane excludes the
 entries belonging to other providers by label --- `site-controller &&
 !nico-forge` here --- rather than requiring its own, which would also drop

@@ -7,12 +7,12 @@
 # No identifiers. Every ${...} below is read from the process environment at
 # load time; CI supplies them from repository variables, the same route the
 # Teleport proxy and the jump host already take. What stays here is the part
-# that is engineering rather than account: which datahalls exist, which
+# that is engineering rather than account: which sites exist, which
 # machines they offer, and what those machines provide.
 #
-# Credentials are not here. A datahall's SSA client comes from
-# DSX_<DATAHALL>_SSA_CLIENT_ID and _SECRET, whose names are derived from the
-# key the site is filed under --- so a credential scoped to one datahall cannot
+# Credentials are not here. A site's SSA client comes from
+# DSX_<SITE>_SSA_CLIENT_ID and _SECRET, whose names are derived from the
+# key the site is filed under --- so a credential scoped to one site cannot
 # be picked up by a run against another, and none of it belongs in a file.
 #
 # This file changes when the hardware does. A run needing a different Kubernetes
@@ -31,63 +31,63 @@ infrastructure:
     id: "${DSX_ORG_ID:-ncx}"
 
   sites:
-    # The key names the datahall without identifying it, the way forge.yaml's
-    # site-1 and site-2 do: which datahall this is belongs in a variable, not
-    # in a file this repository publishes. `api` carries the host that the key
-    # used to imply, and is required for the same reason.
+    # The key names the site without identifying it, the way forge.yaml's
+    # site-1 and site-2 do: which site this is belongs in a variable, not in a
+    # file this repository publishes. `api` carries the host that the key used
+    # to imply, and is required for the same reason.
     #
-    # Every identifier below belongs to one datahall and only that one. Two
-    # datahalls at one site hold completely disjoint UUIDs for the same kinds of
-    # object, and nothing in an API response says which one an id came from --
-    # a recorded run log is itself named for one datahall while describing a run
-    # in another, which is how close that mistake sits. A second datahall is a
-    # second key here,
-    # and the resolver picks between them on capabilities.
+    # Every identifier below belongs to one site and only that one. Two sites
+    # hold completely disjoint UUIDs for the same kinds of object, even when
+    # they sit together, and nothing in an API response says which one an id
+    # came from -- a recorded run log is itself named for one site while
+    # describing a run in another, which is how close that mistake sits. A
+    # second site is a second key here, and the resolver picks between them on
+    # capabilities.
     #
-    # Every machine this datahall owns is amd64 --- Lenovo SR675 V3 OVX boxes,
-    # AMD EPYC with L40S accelerators --- which is why the stream it answers is
-    # amd64. A datahall offering arm64 would be a second key beside this one,
-    # with its own disjoint UUIDs and its own API host; nothing here is shared.
-    datahall-1:
-      api: "${DSX_DATAHALL_1_API:-}"
-      id: "${DSX_DATAHALL_1_SITE_ID:-}"
-      tenantID: "${DSX_DATAHALL_1_TENANT_ID:-}"
-      vpcID: "${DSX_DATAHALL_1_VPC_ID:-}"
+    # Every machine this site owns is amd64 --- Lenovo SR675 V3 OVX boxes, AMD
+    # EPYC with L40S accelerators --- which is why the stream it answers is
+    # amd64. The arm64 site is a second key beside this one, with its own
+    # disjoint UUIDs and its own API host; nothing here is shared.
+    site-1:
+      api: "${DSX_SITE_1_API:-}"
+      id: "${DSX_SITE_1_SITE_ID:-}"
+      tenantID: "${DSX_SITE_1_TENANT_ID:-}"
+      vpcID: "${DSX_SITE_1_VPC_ID:-}"
 
       # FNN here too, so a prefix. The one filed under this key is a /29 ---
       # four nodes at a /31 each, which is a site controller plus a tenant
       # control plane and worker with one to spare, and no address left over
       # for a control-plane VIP.
-      vpcPrefixID: "${DSX_DATAHALL_1_VPC_PREFIX_ID:-}"
+      vpcPrefixID: "${DSX_SITE_1_VPC_PREFIX_ID:-}"
 
-      # SOL console only, as at every datahall so far. The group this one uses
-      # was created with the datahall and is already associated with the site.
-      sshKeyGroupID: "${DSX_DATAHALL_1_SSH_KEY_GROUP_ID:-}"
+      # SOL console only, as at every site so far. The group this one uses was
+      # created with the site and is already associated with it.
+      sshKeyGroupID: "${DSX_SITE_1_SSH_KEY_GROUP_ID:-}"
 
       # Empty, so the account falls through to the os-image default. The lane
       # boots the OSS release, which bakes `ubuntu`.
       #
-      # The hand procedure for this datahall uses dgxc-admin, because that
+      # The hand procedure for this site uses dgxc-admin, because that
       # boots an internal-pipeline image --- do not copy it here. Setting this
       # to an account the booted image does not have writes authorized_keys for
       # nobody, and the run spends its whole ReachTimeout being refused on
       # publickey with nothing saying why: the dial is what failed, so there is
       # no session to collect cloud-init diagnostics over.
-      nodeUser: "${DSX_DATAHALL_1_NODE_USER:-}"
+      nodeUser: "${DSX_SITE_1_NODE_USER:-}"
 
       # Enrolled in Teleport 2026-10-13. Named by the variable rather than
       # here: the workflow holds the host as a secret and scrubs it from
       # uploaded artifacts, which writing it down would undo. The nodes this
       # lane creates are not enrolled themselves and sit behind it.
-      jumpHost: "${DSX_DATAHALL_1_JUMP_HOST:-}"
-      teleportLogin: "${DSX_DATAHALL_1_TELEPORT_LOGIN:-}"
+      jumpHost: "${DSX_SITE_1_JUMP_HOST:-}"
+      teleportLogin: "${DSX_SITE_1_TELEPORT_LOGIN:-}"
 
       # No machines declared, deliberately. Pinning one is what a hand bring-up
       # wants and what wedges a lane: on 2026-10-12 a pinned machine sat held
       # by a teardown that would not finish and every run failed `409 ... is
       # assigned to an Instance` while six other machines were free and idle.
       #
-      # This datahall has NO CPU-only machines: every one of its boxes is a
+      # This site has NO CPU-only machines: every one of its boxes is a
       # Lenovo SR675 V3 OVX carrying eight L40S. The type below binds eight of
       # them. One machine is enough for stage=provision; a full run places
       # three at once -- a site controller, a tenant control plane and a
@@ -95,49 +95,51 @@ infrastructure:
       # the binding does.
       #
       # `provides` says gpu rather than cpu because that is what the hardware
-      # is. The site controller runs on accelerator hardware here for the same
-      # reason it did at the previous datahall -- there is nothing else --
-      # where a datahall with CPU boxes would declare cpu and keep the
-      # accelerators for the streams that exercise them. Resolve falls back to
-      # a GPU shape when a datahall declares no CPU one.
+      # is. The site controller runs on accelerator hardware here because
+      # there is nothing else; a site with CPU boxes would declare cpu and keep
+      # the accelerators for the streams that exercise them. Resolve falls back
+      # to a GPU shape when a site declares no CPU one.
+      #
+      # It names the model too, which is what a stream's `gpu` is matched
+      # against: dsx-l40s-... resolves to nothing without it.
       instanceTypes:
-        - name: datahall-1-nvke-tenant
-          id: "${DSX_DATAHALL_1_INSTANCE_TYPE_ID:-}"
-          provides: {machineType: gpu, arch: amd64}
+        - name: site-1-nvke-tenant
+          id: "${DSX_SITE_1_INSTANCE_TYPE_ID:-}"
+          provides: {machineType: gpu, arch: amd64, gpu: l40s}
 
     # arm64 throughout --- every machine it owns is a Vera Rubin NVL72 tray on
-    # an Olympus CPU --- so this datahall answers the arm64 stream where
-    # datahall-1 answers amd64. Its ids are disjoint from that
-    # one's; nothing above is reused here, including the API host.
-    datahall-2:
-      api: "${DSX_DATAHALL_2_API:-}"
-      id: "${DSX_DATAHALL_2_SITE_ID:-}"
-      tenantID: "${DSX_DATAHALL_2_TENANT_ID:-}"
-      vpcID: "${DSX_DATAHALL_2_VPC_ID:-}"
+    # an Olympus CPU --- so this site answers the arm64 stream where site-1
+    # answers amd64. Its ids are disjoint from that one's; nothing above is
+    # reused here, including the API host.
+    site-2:
+      api: "${DSX_SITE_2_API:-}"
+      id: "${DSX_SITE_2_SITE_ID:-}"
+      tenantID: "${DSX_SITE_2_TENANT_ID:-}"
+      vpcID: "${DSX_SITE_2_VPC_ID:-}"
 
-      # A /27, so sixteen nodes at a /31 each, where datahall-1's /29 holds
-      # four. A full run places three, and the VIP has room here.
-      vpcPrefixID: "${DSX_DATAHALL_2_VPC_PREFIX_ID:-}"
+      # A /27, so sixteen nodes at a /31 each, where site-1's /29 holds four.
+      # A full run places three, and the VIP has room here.
+      vpcPrefixID: "${DSX_SITE_2_VPC_PREFIX_ID:-}"
 
-      # SOL console only, as at every datahall. Created with the jump host and
+      # SOL console only, as at every site. Created with the jump host and
       # already associated with the site.
-      sshKeyGroupID: "${DSX_DATAHALL_2_SSH_KEY_GROUP_ID:-}"
+      sshKeyGroupID: "${DSX_SITE_2_SSH_KEY_GROUP_ID:-}"
 
-      # Empty for the same reason as datahall-1: the account falls through to
+      # Empty for the same reason as site-1: the account falls through to
       # the os-image default, which bakes `ubuntu`.
-      nodeUser: "${DSX_DATAHALL_2_NODE_USER:-}"
+      nodeUser: "${DSX_SITE_2_NODE_USER:-}"
 
       # Enrolled in Teleport 2026-10-31. Named by the variable rather than
       # here, so the workflow can scrub it from uploaded artifacts.
-      jumpHost: "${DSX_DATAHALL_2_JUMP_HOST:-}"
-      teleportLogin: "${DSX_DATAHALL_2_TELEPORT_LOGIN:-}"
+      jumpHost: "${DSX_SITE_2_JUMP_HOST:-}"
+      teleportLogin: "${DSX_SITE_2_TELEPORT_LOGIN:-}"
 
       # No machines declared, for the reason given above.
       #
-      # `provides` says gpu because that is what the hardware is: this datahall
+      # `provides` says gpu because that is what the hardware is: this site
       # has no CPU-only machine either, so the site controller runs on an
       # accelerator tray here too.
       instanceTypes:
-        - name: datahall-2-nvke-tenant
-          id: "${DSX_DATAHALL_2_INSTANCE_TYPE_ID:-}"
-          provides: {machineType: gpu, arch: arm64}
+        - name: site-2-nvke-tenant
+          id: "${DSX_SITE_2_INSTANCE_TYPE_ID:-}"
+          provides: {machineType: gpu, arch: arm64, gpu: vr200}

@@ -322,7 +322,7 @@ func TestJumpHostTakesTheFirstSiteSet(t *testing.T) {
 	t.Setenv("FORGE_JUMP_HOST", "")
 	t.Setenv("FORGE_SITE_2_JUMP_HOST", "two.example")
 	t.Setenv("FORGE_SITE_2_TELEPORT_LOGIN", "root")
-	t.Setenv("DSX_DATAHALL_1_JUMP_HOST", "dsx.example")
+	t.Setenv("DSX_SITE_1_JUMP_HOST", "dsx.example")
 	if v, h, l := jumpHost(); v != "FORGE_SITE_2_JUMP_HOST" || h != "two.example" || l != "root" {
 		t.Errorf("jumpHost = %q, %q, %q; want site 2's", v, h, l)
 	}

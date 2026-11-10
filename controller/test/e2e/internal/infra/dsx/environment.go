@@ -473,7 +473,7 @@ func (s Site) Place(arch string) (Placement, error) {
 // matchSiteControllerType picks the instance type the site controller goes on.
 //
 // A datahall with CPU boxes resolves to one, which is what Place's comment
-// above describes. datahall-1 has no CPU machine at all -- every machine it
+// above describes. site-1 has no CPU machine at all -- every machine it
 // owns is a GPU tray -- so fall back to a GPU shape rather than refuse to
 // place. Resolve and Place must agree on the shape or a run resolves against
 // one type and is placed on another, so both call this.

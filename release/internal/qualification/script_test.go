@@ -445,3 +445,38 @@ func TestWithholdScrubsJumpHostsAndTheIssuer(t *testing.T) {
 		}
 	}
 }
+
+// An API value is a URL, and a failed lookup or handshake names only its host,
+// so the host is scrubbed on its own as well as inside the URL. The org
+// variable beside it is not an API host and stays.
+func TestWithholdScrubsTheDSXAPIHosts(t *testing.T) {
+	for _, sh := range shells(t) {
+		dir := t.TempDir()
+		text := "Get \"https://api-1.example/v2/org/ncx/nico/instance\": dial tcp: lookup api-1.example: no such host\n" +
+			"x509: certificate is valid for other.example, not api-2.example\n" +
+			"org ncx is kept\n"
+		for _, f := range []string{"qualify-e2e.log", "qualify-e2e.report.json"} {
+			if err := os.WriteFile(filepath.Join(dir, f), []byte(text), 0o600); err != nil {
+				t.Fatal(err)
+			}
+		}
+		l := newSteps(t, sh, map[string]string{
+			"DSX_ORG_ID":     "ncx",
+			"DSX_SITE_1_API": "https://api-1.example/v2/org/ncx/nico",
+			"DSX_SITE_2_API": "https://api-2.example",
+		})
+		l.step(true, "withhold", dir)
+		want := "Get \"[withheld]/instance\": dial tcp: lookup [withheld]: no such host\n" +
+			"x509: certificate is valid for other.example, not [withheld]\n" +
+			"org ncx is kept\n"
+		for _, f := range []string{"qualify-e2e.log", "qualify-e2e.report.json"} {
+			got, err := os.ReadFile(filepath.Join(dir, f))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if string(got) != want {
+				t.Errorf("%s: %s scrubbed to %q, want %q", sh, f, got, want)
+			}
+		}
+	}
+}

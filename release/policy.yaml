@@ -7,7 +7,7 @@
 # component resolves to a version is in registry.yaml.
 #
 # The streams below are the ones that exist: the Forge lanes on GB200 and L40S
-# capacity, and the DSX lane on the DSX datahall's GPU trays.
+# capacity, and the DSX lanes on L40S and VR200 capacity.
 # A policy naming capabilities no runner has produces plans that nothing can
 # schedule, so a stream is added with the runner that backs it.
 
@@ -22,23 +22,22 @@ spec:
     # it.
     golden-path:
       selector: {ubuntu: "24.04", gpu: gb200}
-    # Ubuntu 24.04 on L40S. One stream, amd64, and the only GPU shape site-1
-    # offers. The qualify-e2e-l40s label selects this instead of golden-path.
+    # Ubuntu 24.04 on L40S at Forge site-1: one stream, amd64, and the only GPU
+    # shape it offers. Forge is named because the DSX L40S stream carries the
+    # same gpu and would otherwise join. The qualify-e2e-l40s label selects
+    # this instead of golden-path.
     l40s:
-      selector: {ubuntu: "24.04", gpu: l40s}
+      selector: {provider: forge, ubuntu: "24.04", gpu: l40s}
 
-    # The DSX datahall on its own. The dsx stream declares no gpu, so
-    # golden-path does not reach it, even though the hardware is accelerator
-    # hardware: the datahall advertises no GPU model, so a stream asking for
-    # one resolves to nothing. A provider selector is the only one that
-    # separates the two lanes, which is what this scope is for.
+    # Every DSX stream. Provider is what separates the two lanes: DSX carries
+    # its own gpu models, so none of the GPU scopes above reaches it.
     dsx:
       selector: {provider: dsx}
 
-    # One datahall each. `dsx` selects on provider alone, so it now fans out to
-    # both DSX streams; these name one, which is what a run against a single
-    # datahall wants -- bringing a new one up, or keeping a known-good lane off
-    # hardware that is still being proven.
+    # One DSX site each. `dsx` fans out to both, so these name one: what a run
+    # against a single site wants, and how a known-good lane stays off hardware
+    # that is still being proven. The qualify-e2e-dsx label selects dsx-amd64;
+    # dsx-arm64 and dsx are reached through QUALIFY_E2E_SCOPE.
     dsx-amd64:
       selector: {provider: dsx, arch: amd64}
     dsx-arm64:
@@ -76,9 +75,7 @@ spec:
   # A stream is named <provider>-<gpu>-<arch>-ubuntu-<series>-kube-<minor>, so
   # two streams that differ only in GPU model do not share a name. A stream
   # that declares no gpu omits that segment rather than inventing a value for
-  # it --- the DSX lane below is named dsx-amd64-..., and a `none` or `cpu`
-  # there would read as a capability no stream selects on. The name is the key
-  # of everything recorded for a stream.
+  # it. The name is the key of everything recorded for a stream.
   streams:
     - name: forge-gb200-amd64-ubuntu-24.04-kube-1.36
       capabilities: {provider: forge, gpu: gb200, arch: amd64, ubuntu: "24.04", kube: "1.36"}
@@ -93,30 +90,24 @@ spec:
     - name: forge-l40s-amd64-ubuntu-26.04-kube-1.36
       capabilities: {provider: forge, gpu: l40s, arch: amd64, ubuntu: "26.04", kube: "1.36"}
 
-    # The DSX datahall, which is amd64 throughout. No gpu: the datahall
-    # declares no GPU model, so a stream asking for an accelerator here
-    # resolves to nothing even though the trays are GPU hardware.
-    #
-    # amd64 because that is what the hardware is, not a choice --- every
-    # machine the datahall owns is a Lenovo SR675 V3 OVX, AMD EPYC carrying
-    # eight L40S. The arm64 stream below is that second site and second
-    # stream: a different datahall, with its own ids and its own API host.
+    # DSX site-1, amd64 and l40s because that is what the hardware is, not a
+    # choice --- every machine it owns is a Lenovo SR675 V3 OVX, AMD EPYC
+    # carrying eight L40S. The arm64 stream below is a second site, with its
+    # own ids and its own API host.
     #
     # kube 1.36 matches the Forge streams. The recorded DSX exercise reached
     # CoreDNS on a 1.34.2 tenant, so 1.36 is unproven on this substrate.
-    - name: dsx-amd64-ubuntu-24.04-kube-1.36
-      capabilities: {provider: dsx, arch: amd64, ubuntu: "24.04", kube: "1.36"}
+    - name: dsx-l40s-amd64-ubuntu-24.04-kube-1.36
+      capabilities: {provider: dsx, gpu: l40s, arch: amd64, ubuntu: "24.04", kube: "1.36"}
 
-    # The second DSX datahall, arm64 because every machine it owns is a Vera
-    # Rubin NVL72 tray on an Olympus CPU. No gpu for the same reason as above:
-    # the datahall declares no GPU model, so a stream asking for an accelerator
-    # resolves to nothing here even though the trays are accelerator hardware.
+    # DSX site-2, arm64 and vr200 because every machine it owns is a Vera
+    # Rubin NVL72 tray on an Olympus CPU.
     #
-    # 26.04 where the datahall above is 24.04, so the two DSX streams differ in
-    # series as well as arch. The image is there: os-image-artifact builds and
-    # publishes 26.04 for both arches on every beta, under
+    # 26.04 where site-1 is 24.04, so the two DSX streams differ in series as
+    # well as arch. The image is there: os-image-artifact builds and publishes
+    # 26.04 for both arches on every beta, under
     # nvke-packages/os-image/releases/<version>/<arch>/. Proven on 2026-11-02:
     # run 41481335380 took this stream through stage full --- site controller,
     # stack and a two-node tenant --- at 51 of 51 specs.
-    - name: dsx-arm64-ubuntu-26.04-kube-1.36
-      capabilities: {provider: dsx, arch: arm64, ubuntu: "26.04", kube: "1.36"}
+    - name: dsx-vr200-arm64-ubuntu-26.04-kube-1.36
+      capabilities: {provider: dsx, gpu: vr200, arch: arm64, ubuntu: "26.04", kube: "1.36"}

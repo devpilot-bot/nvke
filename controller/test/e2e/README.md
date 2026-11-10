@@ -869,34 +869,35 @@ from the environment; the lane's maintainers can give you the values.
   ```
 
 **On DSX** (`-e2e.environment=dsx`) the credential is different and the stage
-is limited. Each datahall carries its own SSA client, named for the key it is
+is limited. Each site carries its own SSA client, named for the key it is
 filed under in `environments/dsx.yaml`:
 
 ```bash
 export SSA_ISSUER=…                                  # issuer BASE url; the
-export DSX_DATAHALL_1_SSA_CLIENT_ID=…         # suite appends /token
-export DSX_DATAHALL_1_SSA_CLIENT_SECRET=…     # 15-minute TTL
-export DSX_DATAHALL_1_JUMP_HOST=…             # the rest are identifiers
-export DSX_DATAHALL_1_API=…                   # required; the datahall's host
-export DSX_DATAHALL_1_SITE_ID=… DSX_DATAHALL_1_TENANT_ID=…
-export DSX_DATAHALL_1_VPC_ID=… DSX_DATAHALL_1_VPC_PREFIX_ID=…
-export DSX_DATAHALL_1_SSH_KEY_GROUP_ID=… DSX_DATAHALL_1_INSTANCE_TYPE_ID=…
+export DSX_SITE_1_SSA_CLIENT_ID=…         # suite appends /token
+export DSX_SITE_1_SSA_CLIENT_SECRET=…     # 15-minute TTL
+export DSX_SITE_1_JUMP_HOST=…             # the rest are identifiers
+export DSX_SITE_1_API=…                   # required; the site's host
+export DSX_SITE_1_SITE_ID=… DSX_SITE_1_TENANT_ID=…
+export DSX_SITE_1_VPC_ID=… DSX_SITE_1_VPC_PREFIX_ID=…
+export DSX_SITE_1_SSH_KEY_GROUP_ID=… DSX_SITE_1_INSTANCE_TYPE_ID=…
 ```
 
 There is no cluster fallback: an unset client fails the run naming both
-variables. The names derive from the datahall key, so a credential scoped to
-one datahall cannot be picked up by a run against another.
+variables. The names derive from the site key, so a credential scoped to one
+site cannot be picked up by a run against another.
 
-Every stage runs, `full` included: the datahall has its own tenant spec, so a
-`full` run builds the site and then a control plane and a worker on it. The
-site lane registers one tenant entry per dialect and each decodes the
+Every stage runs, `full` included: DSX has its own tenant spec, so a `full` run
+builds the site and then a control plane and a worker on it. The site lane
+registers one tenant entry per dialect and each decodes the
 environment strictly, so a hand-run selects its own with
 `-ginkgo.label-filter="site-controller && !nico-forge"`; the workflow does the
 same from the provider it resolved.
 
-The DSX datahall is **amd64 only**, which is what an absent `arch` capability
-already defaults to, so the capability below is explicit rather than required.
-Stage amd64 OS images to match:
+DSX site-1 is **amd64 only**, which is what an absent `arch` capability already
+defaults to, so the capability below is explicit rather than required. Site-2 is
+arm64: ask for it with `arch=arm64,gpu=vr200` and stage arm64 OS images.
+Stage amd64 OS images to match site-1:
 
 ```bash
 go test -timeout 5h . -args \

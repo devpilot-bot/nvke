@@ -106,7 +106,7 @@ Add a label to a pull request from a branch of this repository:
 |---|---|
 | `qualify-e2e` | the scope in `QUALIFY_E2E_SCOPE`, or `golden-path` when that is unset |
 | `qualify-e2e-l40s` | the `l40s` scope |
-| `qualify-e2e-dsx` | the `dsx` scope |
+| `qualify-e2e-dsx` | the `dsx-amd64` scope |
 | `qualify-e2e-dry-run` | a dry run |
 
 A pull request has no dispatch inputs, so a labelled run takes them from the
@@ -605,9 +605,11 @@ job; `qualify local` runs the one stream you name.
 
 | Scope | Streams |
 |---|---|
-| `golden-path` | Ubuntu 24.04 on GB200, amd64 and arm64 site controllers, at site-2 |
-| `l40s` | Ubuntu 24.04 on L40S, amd64, at site-1 |
-| `dsx` | the DSX datahall |
+| `golden-path` | Ubuntu 24.04 on GB200, amd64 and arm64 site controllers, at Forge site-2 |
+| `l40s` | Ubuntu 24.04 on L40S, amd64, at Forge site-1 |
+| `dsx` | every DSX stream: L40S on Ubuntu 24.04 at DSX site-1 and VR200 on Ubuntu 26.04 at DSX site-2 |
+| `dsx-amd64` | the DSX L40S stream, amd64, at DSX site-1 |
+| `dsx-arm64` | the DSX VR200 stream, arm64, at DSX site-2 |
 | `full` | every Forge stream: GB200 and L40S on Ubuntu 24.04 and 26.04 |
 
 ## Stages

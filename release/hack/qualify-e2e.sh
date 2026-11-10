@@ -704,19 +704,24 @@ step_run() {
 }
 
 # The suite names the jump host in its own errors ("not reachable
-# through ..."), and the SSA token exchange names its issuer in the
-# errors it returns. Both land in the log and the JUnit report, and
-# GitHub masks a secret in the job log but not in an uploaded artifact.
+# through ..."), the SSA token exchange names its issuer in the errors it
+# returns, and a failed API call names the DSX API host. All land in the
+# log and the JUnit report, and GitHub masks a secret in the job log but
+# not in an uploaded artifact.
 #
 # Every declared host: a run reaches one of them, and which one is not
 # worth branching on here. Discovered by suffix rather than listed, so a
-# datahall added to environments/dsx.yaml is withheld by having named its
-# secret *_JUMP_HOST, with nothing to update here. A hand-written list
-# fails the other way: the value it omits is the one the suite names in
-# its errors and the artifact then publishes, with no error to notice.
+# site added to environments/dsx.yaml is withheld by having named its
+# secrets *_JUMP_HOST and DSX_*_API, with nothing to update here. A
+# hand-written list fails the other way: the value it omits is the one
+# the suite names in its errors and the artifact then publishes, with no
+# error to notice.
+#
+# An API value is a URL, but a failed lookup or handshake names only the
+# host, so the host is withheld on its own as well.
 step_withhold() {
   cd "${1:-${e2e}}"
-  local var raw trimmed form value f
+  local var raw trimmed host form value f
   while IFS= read -r var; do
     raw="${!var:-}"
     [ -n "${raw}" ] || continue
@@ -725,7 +730,11 @@ step_withhold() {
     # slash reaches an error without it and a single literal match
     # would leave that form in the artifact.
     trimmed="$(printf '%s' "${raw}" | sed 's#^[[:space:]]*##; s#[[:space:]]*$##; s#/*$##')"
-    for form in "${raw}" "${trimmed}"; do
+    host=""
+    case "${var}" in
+      DSX_*_API) host="${trimmed#*://}"; host="${host%%/*}" ;;
+    esac
+    for form in "${raw}" "${trimmed}" "${host}"; do
       [ -n "${form}" ] || continue
       value="$(printf '%s' "${form}" | sed 's/[][\.*^$/]/\\&/g')"
       for f in "${scrubbed[@]}"; do
@@ -737,7 +746,7 @@ step_withhold() {
         mv "${f}.withheld" "${f}"
       done
     done
-  done < <(compgen -v | grep -E '_JUMP_HOST$|^SSA_ISSUER$' || true)
+  done < <(compgen -v | grep -E '_JUMP_HOST$|^DSX_.*_API$|^SSA_ISSUER$' || true)
 }
 
 # What the suite wrote, for a caller to collect after withhold.
