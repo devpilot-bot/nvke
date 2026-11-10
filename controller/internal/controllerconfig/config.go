@@ -66,6 +66,7 @@ type Config struct {
 	MachineMetadataAllowlistedAnnotationKeys []string                   `json:"machineMetadataAllowlistedAnnotationKeys"`
 	AllowControlPlaneWithoutVIP              bool                       `json:"allowControlPlaneWithoutVIP"`
 	APIAuth                                  APIAuthConfig              `json:"apiAuth"`
+	APIAuthz                                 APIAuthzConfig             `json:"apiAuthz"`
 }
 
 // FieldManagerConfig groups the Server-Side-Apply field manager names, mirroring
@@ -285,6 +286,39 @@ func (a APIAuthConfig) validate() error {
 	return a.AuthConfig().ValidateStartup()
 }
 
+// APIAuthzConfig is the NVKE REST API's authorization configuration. It is
+// off when the section is absent.
+type APIAuthzConfig struct {
+	Enabled bool `json:"enabled"`
+
+	// Permissive evaluates, logs and counts every authorization decision
+	// without refusing a request.
+	Permissive bool `json:"permissive"`
+
+	Authorizer AuthorizerConfig `json:"authorizer"`
+}
+
+// AuthorizerConfig chooses the authorization backend. LocalBundle is the only
+// one.
+type AuthorizerConfig struct {
+	LocalBundle LocalBundleConfig `json:"localBundle"`
+}
+
+// LocalBundleConfig configures the LocalBundle backend.
+type LocalBundleConfig struct {
+	// Dir is the mounted directory that holds policies.cedar, roles.json and
+	// authorization.yaml.
+	Dir string `json:"dir"`
+}
+
+// validate requires authorizer.localBundle.dir when enabled is true.
+func (a APIAuthzConfig) validate() error {
+	if a.Enabled && strings.TrimSpace(a.Authorizer.LocalBundle.Dir) == "" {
+		return errors.New("authorizer.localBundle.dir is required when enabled is true")
+	}
+	return nil
+}
+
 // Load reads and validates the configuration at path. A missing file is not
 // reached in practice: Kubernetes will not start the controller's container
 // until the ConfigMap a volume mount references exists. A malformed or
@@ -412,6 +446,10 @@ func (c *Config) Validate() error {
 		return fmt.Errorf("apiAuth: %w", err)
 	}
 
+	if err := c.APIAuthz.validate(); err != nil {
+		return fmt.Errorf("apiAuthz: %w", err)
+	}
+
 	if c.ManagementNamespace != "" {
 		if errs := validation.IsDNS1123Label(c.ManagementNamespace); len(errs) > 0 {
 			return fmt.Errorf("managementNamespace %q is not a valid namespace name: %s", c.ManagementNamespace, strings.Join(errs, "; "))
@@ -438,6 +476,12 @@ func (c *Config) Validate() error {
 
 	if err := validateSupportedInfraProviders(c.SupportedInfraProviders); err != nil {
 		return fmt.Errorf("supportedInfraProviders: %w", err)
+	}
+	// The method is deployment-wide, and a SPIFFE-enabled LaunchLayer node
+	// attests only through dsx_imds, so its first node would be refused.
+	if c.Spire.SpiffeEnabled && c.NodeAgent.SpireAttestationMethod != SpireAttestationMethodDSXIMDS && slices.Contains(c.SupportedInfraProviders, InfraProviderLaunchLayer) {
+		return fmt.Errorf("nodeAgent: spireAttestationMethod must be %q when supportedInfraProviders includes %q and spire.spiffeEnabled is true, got %q",
+			SpireAttestationMethodDSXIMDS, InfraProviderLaunchLayer, c.NodeAgent.SpireAttestationMethod)
 	}
 
 	if err := validateNodeMetadataAllowlistedLabelKeys(c.NodeMetadataAllowlistedLabelKeys); err != nil {
